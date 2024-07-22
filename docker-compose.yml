@@ -2,7 +2,11 @@ version: '3.4'
 
 services:
   expertcenter:
+    container_name: expert-center-server
     image: ${DOCKER_REGISTRY-}expertcenter
     build:
       context: .
       dockerfile: ExpertCenter/Dockerfile
+  mssql:
+    container_name: sql-server
+    image: mcr.microsoft.com/mssql/server:2022-latest

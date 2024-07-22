@@ -1,7 +1,12 @@
+using ExpertCenter.Models.PriceListDb;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddDbContext<SqlServerPriceListDbContext>(o=>o.UseSqlServer(builder.Configuration.GetConnectionString("PriceListDbSetting")));
 
 var app = builder.Build();
 

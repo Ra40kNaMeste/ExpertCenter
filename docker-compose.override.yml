@@ -1,4 +1,4 @@
-version: '3.4'
+﻿version: '3.4'
 
 services:
   expertcenter:
@@ -11,3 +11,14 @@ services:
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
       - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+  mssql:
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "SuperSecretPassword123!"
+    ports:
+      - 1433:1433
+    volumes:
+      - sql-server-volume:/var/opt/mssql
+      
+volumes:
+  sql-server-volume:
