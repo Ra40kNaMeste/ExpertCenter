@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddDbContext<SqlServerPriceListDbContext>(o=>o.UseSqlServer(builder.Configuration.GetConnectionString("PriceListDbSetting")));
+builder.Services.AddDbContext(new SqlServerPriceListDbContext(builder.Configuration.GetConnectionString("PriceListDbSetting")));
 
 var app = builder.Build();
 

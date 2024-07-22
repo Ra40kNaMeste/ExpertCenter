@@ -5,10 +5,24 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ExpertCenter.Models.PriceListDb
 {
+    public record PriceListDbSettings(string ConnectString);
     public abstract class PriceListDbContext : DbContext
     {
-        DbSet<PriceListInfo> PriceListSheet { get; set; } = null!;
+        public PriceListDbContext(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+        public DbSet<PriceListInfo> PriceListSheet { get; set; } = null!;
 
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseSqlServer(_connectionString);
+            base.OnConfiguring(optionsBuilder);
+        }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+        }
 
         public abstract IEnumerable<PriceColumnInfo> GetColumnsInfo(PriceListInfo table);
         public abstract IEnumerable<PriceItem> GetValues(PriceListInfo table);
@@ -16,8 +30,11 @@ namespace ExpertCenter.Models.PriceListDb
         public abstract void AddValue(PriceListInfo table, PriceItem value);
         public abstract void RemoveValue(PriceListInfo table, int article);
 
-        public abstract PriceListInfo CreateTable(string name);
-        public abstract PriceListInfo DeleteTable(PriceListInfo table);
+        public abstract void CreateTable(string name, IEnumerable<PriceColumnInfo> columnsInfo);
+        public abstract void DeleteTable(PriceListInfo table);
+
+
+        protected readonly string _connectionString;
     }
 
     public class PriceListInfo
