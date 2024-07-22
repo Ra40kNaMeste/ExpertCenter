@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  expertcenter:
+    image: ${DOCKER_REGISTRY-}expertcenter
+    build:
+      context: .
+      dockerfile: ExpertCenter/Dockerfile
