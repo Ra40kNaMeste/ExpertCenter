@@ -13,18 +13,29 @@ namespace ExpertCenter.Models.PriceListDb
             _connectionString = connectionString;
         }
         public DbSet<PriceListInfo> PriceListSheet { get; set; } = null!;
+        public DbSet<ColumnInfoTable> ColumnInfoTable { get; set; } = null!;
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseSqlServer(_connectionString);
             base.OnConfiguring(optionsBuilder);
         }
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        protected override void OnModelCreating(ModelBuilder builder)
         {
-            base.OnModelCreating(modelBuilder);
+            builder.Entity<ColumnInfoTable>()
+                .HasOne(i=>i.PriceListInfo)
+                .WithMany(i=>i.ColumnInfoTables)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            base.OnModelCreating(builder);
         }
 
-        public abstract IEnumerable<PriceColumnInfo> GetColumnsInfo(PriceListInfo table);
+        public IEnumerable<PriceColumnInfo> GetCustomColumnsInfo(PriceListInfo table)
+        {
+            return ColumnInfoTable.Include(i => i.PriceListInfo)
+                .Where(i => i.PriceListInfo == table)
+                .Select(i => new PriceColumnInfo(i.Name, i.Type));
+        }
         public abstract IEnumerable<PriceItem> GetValues(PriceListInfo table);
 
         public abstract void AddValue(PriceListInfo table, PriceItem value);
@@ -45,6 +56,18 @@ namespace ExpertCenter.Models.PriceListDb
         [NotNull]
         [MinLength(5)]
         public string Name { get; set; }
+
+        public List<ColumnInfoTable> ColumnInfoTables { get; set; }
+    }
+
+    public class ColumnInfoTable
+    {
+        public int Id { get; set; }
+        public PriceColumnType Type { get; set; }
+        public string Name { get; set; }
+
+        public int PriceListInfoId { get; set; }
+        public PriceListInfo PriceListInfo { get; set; }
     }
 
     public class PriceItem

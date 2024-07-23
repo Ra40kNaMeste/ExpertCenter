@@ -1,4 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
+using System.Data.Common;
+using System.Reflection.PortableExecutable;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace ExpertCenter.Models.PriceListDb
@@ -10,63 +12,70 @@ namespace ExpertCenter.Models.PriceListDb
 
         public override void CreateTable(string name, IEnumerable<PriceColumnInfo> columnsInfo)
         {
-            string command = $"""
-                CREATE TABLE {name}
-                (Article INT PRIMARY KEY,
-                Title NVARCHAR NOT NULL,
-                """;
+            string command = $"CREATE TABLE {name} ( Article INT PRIMARY KEY, Title NVARCHAR(50) NOT NULL";
+            foreach (var item in columnsInfo)
+            {
+                command += $",{item.Name} {ConvertColumnTypeToString(item.Type)}";
+            }
+            command += ")";
 
-            columnsInfo.Select(i => command += $"{i.Name} {ColumnTypeConvert(i.Type)},\n");
-            command += """
-                );
-                GO
-                """;
-            ExecuteReaderSqlCommand(command);
+            using SqlConnection connection = new(_connectionString);
+            using SqlCommand sqlCommand = connection.CreateCommand();
+            sqlCommand.CommandText = command;
+            connection.Open();
+            sqlCommand.ExecuteReader();
 
-            PriceListSheet.Add(new PriceListInfo()
+            var table = new PriceListInfo()
             {
                 Name = name
+            };
+            PriceListSheet.Add(table);
+            ColumnInfoTable.AddRange(columnsInfo.Select(i => new ColumnInfoTable()
+            {
+                PriceListInfo = table,
+                Name = i.Name,
+                Type = i.Type
+            }));
+            ColumnInfoTable.Add(new ColumnInfoTable()
+            {
+                PriceListInfo = table,
+                Name = "Title",
+                Type = PriceColumnType.OneString
             });
+            ColumnInfoTable.Add(new ColumnInfoTable()
+            {
+                PriceListInfo = table,
+                Name = "Article",
+                Type = PriceColumnType.Int
+            });
+
             SaveChanges();
         }
 
         public override void DeleteTable(PriceListInfo table)
         {
-            ExecuteReaderSqlCommand($"""
-                DELETE TABLE {table.Name}
-                GO
-                """);
+            using SqlConnection connection = new(_connectionString);
+            using SqlCommand sqlCommand = connection.CreateCommand();
+            sqlCommand.CommandText = $"DROP TABLE {table.Name}";
+            connection.Open();
+            sqlCommand.ExecuteReader();
 
             PriceListSheet.Remove(table);
+
             SaveChanges();
         }
 
-        public override IEnumerable<PriceColumnInfo> GetColumnsInfo(PriceListInfo table)
-        {
-            var res = ExecuteReaderSqlCommand($"""
-                SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = "{table.Name}"
-                GO
-                """);
-            foreach (var item in res)
-            {
-                
-            }
-            throw new NotImplementedException();
-
-        }
 
         public override IEnumerable<PriceItem> GetValues(PriceListInfo table)
         {
-            var columns = GetColumnsInfo(table);
-            var res = ExecuteReaderSqlCommand($"""
-                SELECT * FROM {table.Name}
-                GO
-                """);
-            foreach (var item in res)
-            {
+            var columns = GetCustomColumnsInfo(table);
 
-            }
+            using SqlConnection connection = new(_connectionString);
+            using SqlCommand sqlCommand = connection.CreateCommand();
+            sqlCommand.CommandText = $"SELECT * FROM {table.Name}";
+            connection.Open();
+            var reader = sqlCommand.ExecuteReader();
+
             throw new NotImplementedException();
         }
 
@@ -74,37 +83,26 @@ namespace ExpertCenter.Models.PriceListDb
         {
             string command = $"""
                 INSERT INTO {table.Name}(Title, Article 
-
                 """;
-            value.CustomValues.Select(i => command += $", {i.Key}");
-            command += $") VALUES ({value.Title}, {value.Article}";
-            value.CustomValues.Select(i => command += $", {i.Value}");
-            command += ") GO";
+            foreach (var item in value.CustomValues)
+                command += $", {item.Key}";
+            command += $") VALUES ('{value.Title}', '{value.Article}'";
+            foreach (var item in value.CustomValues)
+                
+                command += $", '{item.Value}'";
+            command += ")";
 
             ExecuteNonQuerySqlCommand(command);
         }
 
         public override void RemoveValue(PriceListInfo table, int article)
         {
-            ExecuteNonQuerySqlCommand($"""
-                DELETE ${table.Name}
-                WHERE Article=${article}
-                """);
-        }
-
-        private SqlDataReader ExecuteReaderSqlCommand(string command)
-        {
-            using SqlConnection connection = new(this._connectionString);
-            using SqlCommand sqlCommand = connection.CreateCommand();
-            sqlCommand.CommandText = command;
-            connection.Open();
-            return sqlCommand.ExecuteReader();
-
+            ExecuteNonQuerySqlCommand($"DELETE {table.Name} WHERE Article='{article}'");
         }
 
         private void ExecuteNonQuerySqlCommand(string command)
         {
-            using SqlConnection connection = new(this._connectionString);
+            using SqlConnection connection = new(_connectionString);
             using SqlCommand sqlCommand = connection.CreateCommand();
             sqlCommand.CommandText = command;
             connection.Open();
@@ -112,13 +110,15 @@ namespace ExpertCenter.Models.PriceListDb
 
         }
 
-        private string ColumnTypeConvert(PriceColumnType type) => type switch
+
+        private Dictionary<PriceColumnType, string> _columnEqualsDic = new()
         {
-            PriceColumnType.Int => "INT",
-            PriceColumnType.OneString => "NVARCHAR",
-            PriceColumnType.MultiString => "NVARCHAR",
-            _=>"NVARCHAR"
+            {PriceColumnType.Int, "INT"},
+            {PriceColumnType.OneString, "NVARCHAR(50)"},
+            { PriceColumnType.MultiString, "NVARCHAR(MAX)" }
         };
+        private string ConvertColumnTypeToString(PriceColumnType type) => _columnEqualsDic[type];
+
     }
 
     internal record class ColumnInfo(string COLUMN_NAME, string DATA_TYPE);

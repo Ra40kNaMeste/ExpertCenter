@@ -10,3 +10,9 @@ services:
   mssql:
     container_name: sql-server
     image: mcr.microsoft.com/mssql/server:2022-latest
+  expertcentertests:
+    image: ${DOCKER_REGISTRY-}expertcentertests
+    build:
+      context: .
+      dockerfile: ../ExpertCenterTests/Dockerfile
+
