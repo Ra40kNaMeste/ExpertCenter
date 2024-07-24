@@ -30,20 +30,27 @@ namespace ExpertCenter.Models.PriceListDb
             base.OnModelCreating(builder);
         }
 
+        #region TableAPI
         public IEnumerable<PriceColumnInfo> GetCustomColumnsInfo(PriceListInfo table)
         {
             return ColumnInfoTable.Include(i => i.PriceListInfo)
                 .Where(i => i.PriceListInfo == table)
                 .Select(i => new PriceColumnInfo(i.Name, i.Type));
         }
-        public abstract IEnumerable<PriceItem> GetValues(PriceListInfo table);
-
+        public abstract TableData GetTable(PriceListInfo table);
+        public abstract Task<TableData> GetTableAsync(PriceListInfo table);
         public abstract void AddValue(PriceListInfo table, PriceItem value);
+        public abstract Task AddValueAsync(PriceListInfo table, PriceItem value);
+
         public abstract void RemoveValue(PriceListInfo table, int article);
+        public abstract Task RemoveValueAsync(PriceListInfo table, int article);
 
         public abstract void CreateTable(string name, IEnumerable<PriceColumnInfo> columnsInfo);
+        public abstract Task CreateTableAsync(string name, IEnumerable<PriceColumnInfo> columnsInfo);
         public abstract void DeleteTable(PriceListInfo table);
+        public abstract Task DeleteTableAsync(PriceListInfo table);
 
+        #endregion
 
         protected readonly string _connectionString;
     }
@@ -59,6 +66,8 @@ namespace ExpertCenter.Models.PriceListDb
 
         public List<ColumnInfoTable> ColumnInfoTables { get; set; }
     }
+
+    public record class TableData(IEnumerable<PriceColumnInfo> Headers, IEnumerable<PriceItem> Values);
 
     public class ColumnInfoTable
     {
